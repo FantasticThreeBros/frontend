@@ -1,69 +1,222 @@
-import Image from "next/image";
+
+"use client";
+import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { usePassport } from "@/hooks/usePassport";
+import { RegistryPanel } from "@/components/RegistryPanel";
+import { VerifierPanel } from "@/components/VerifierPanel";
+import { EnrollPanel } from "@/components/EnrollPanel";
+import { VerifyPanel } from "@/components/VerifyPanel";
+import { EnrollmentsTable } from "@/components/EnrollmentsTable";
+import { NullifiersTable } from "@/components/NullifiersTable";
+import { Toast, ToastType } from "@/components/Toast";
+import { LayoutDashboard, Settings, Fingerprint, ShieldCheck, Database, RefreshCcw, Activity } from "lucide-react";
+
+const WalletMultiButton = dynamic(
+  () => import("@solana/wallet-adapter-react-ui").then(m => m.WalletMultiButton),
+  { ssr: false }
+);
+
+const TABS = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "admin",    label: "Admin",    icon: Settings },
+  { id: "enroll",   label: "Enroll",   icon: Fingerprint },
+  { id: "verify",   label: "Verify",   icon: ShieldCheck },
+  { id: "data",     label: "Explorer", icon: Database },
+];
+
+interface ToastState { id: number; message: string; type: ToastType; sig?: string; }
 
 export default function Home() {
+  const { connected } = useWallet();
+  const { fetchRegistry, fetchAllEnrollments, fetchAllNullifiers } = usePassport();
+
+  const [activeTab, setActiveTab] = useState("overview");
+  const [registry, setRegistry] = useState<any>(null);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [nullifiers, setNullifiers] = useState<any[]>([]);
+  const [toasts, setToasts] = useState<ToastState[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const toast = useCallback((message: string, type: ToastType = "info", sig?: string) => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type, sig }]);
+  }, []);
+
+  const refresh = useCallback(async () => {
+    if (!connected) return;
+    setRefreshing(true);
+    try {
+      const [reg, enrols, nulls] = await Promise.all([
+        fetchRegistry(),
+        fetchAllEnrollments(),
+        fetchAllNullifiers(),
+      ]);
+      setRegistry(reg);
+      setEnrollments(enrols);
+      setNullifiers(nulls);
+    } catch (e: any) {
+      console.error("Refresh error:", e);
+    } finally { setRefreshing(false); }
+  }, [connected, fetchRegistry, fetchAllEnrollments, fetchAllNullifiers]);
+
+  useEffect(() => { if (connected) refresh(); }, [connected, refresh]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div style={{ minHeight: "100vh", position: "relative", zIndex: 1, paddingBottom: 64 }}>
+      {/* Header */}
+      <header style={{
+        background: "var(--surface)",
+        borderBottom: "1px solid var(--border)",
+        position: "sticky", top: 0, zIndex: 100,
+        padding: "0 32px",
+      }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: "var(--accent)", color: "var(--accent-text)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Fingerprint size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>Passport Protocol</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {connected && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginRight: 8 }}>
+                <Activity size={14} color="var(--success)" />
+                <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 500 }}>Devnet</span>
+              </div>
+            )}
+            <button
+              onClick={refresh}
+              disabled={!connected || refreshing}
+              className="btn btn-secondary"
+              style={{ padding: "7px 12px", height: 36 }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              {refreshing ? <span className="spinner" /> : <RefreshCcw size={16} />}
+            </button>
+            <WalletMultiButton />
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      {/* Stats bar */}
+      {connected && registry && (
+        <div style={{ background: "var(--bg)", borderBottom: "1px solid var(--border)", padding: "16px 32px" }}>
+          <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", gap: 48, overflowX: "auto" }}>
+            {[
+              { label: "Enrolled Identities", value: enrollments.length },
+              { label: "Nullifiers Used",      value: nullifiers.length },
+              { label: "Next Leaf Index",      value: registry.nextLeafIndex },
+              { label: "Registry Status",      value: registry.isFrozen ? "Frozen" : "Active" },
+            ].map(s => (
+              <div key={s.label} style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: "max-content" }}>
+                <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>{s.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 600, color: "var(--text)" }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </main>
+      )}
+
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 32px" }}>
+        {!connected ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 24 }}>
+            <div style={{ textAlign: "center" }}>
+              <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 16 }}>
+                Privacy-preserving Proof-of-Personhood
+              </h1>
+              <p style={{ color: "var(--muted)", fontSize: 18, maxWidth: 600, lineHeight: 1.6, margin: "0 auto" }}>
+                One human, one identity. Connect your wallet to interact with the on-chain registry.
+              </p>
+            </div>
+            <WalletMultiButton style={{ marginTop: 8 }} />
+            
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginTop: 48, width: "100%", maxWidth: 900 }}>
+              {[
+                { icon: Fingerprint, title: "Enroll Anonymously", desc: "Commit your identity to the Merkle tree using a credential — no PII on-chain." },
+                { icon: ShieldCheck, title: "Prove Personhood", desc: "dApps verify you're human via CPI; per-app nullifiers prevent replay." },
+                { icon: Activity, title: "Privacy-preserving", desc: "sha256 commitment + zero-knowledge Merkle proofs keep you private." },
+              ].map(f => (
+                <div key={f.title} className="card" style={{ padding: 24 }}>
+                  <f.icon size={24} style={{ marginBottom: 16, color: "var(--text)" }} />
+                  <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8 }}>{f.title}</div>
+                  <div style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.6 }}>{f.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Tab bar */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 32, borderBottom: "1px solid var(--border)", paddingBottom: 0 }}>
+              {TABS.map(t => (
+                <button key={t.id} className={`tab ${activeTab === t.id ? "active" : ""}`} onClick={() => setActiveTab(t.id)}>
+                  <t.icon size={16} /> {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            {activeTab === "overview" && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                <RegistryPanel registry={registry} onRefresh={refresh} onToast={toast} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                  <div className="card" style={{ padding: 24 }}>
+                    <div className="section-title"><Database size={20}/> How it Works</div>
+                    <ol style={{ fontSize: 14, color: "var(--muted)", lineHeight: 2.2, paddingLeft: 16 }}>
+                      <li><b style={{ color: "var(--text)" }}>Admin</b> initializes the registry + registers a verifier program</li>
+                      <li><b style={{ color: "var(--text)" }}>User</b> creates a credential owned by the verifier, derives commitment = sha256(cred pubkey)</li>
+                      <li><b style={{ color: "var(--text)" }}>Enroll</b>: commitment added to the on-chain Merkle tree (deduplicated)</li>
+                      <li><b style={{ color: "var(--text)" }}>dApp</b> calls <code>verify_personhood</code> via CPI → creates nullifier</li>
+                      <li><b style={{ color: "var(--text)" }}>Replay</b> fails with <code>NullifierAlreadyUsed</code></li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "admin" && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                <RegistryPanel registry={registry} onRefresh={refresh} onToast={toast} />
+                <VerifierPanel onToast={toast} />
+              </div>
+            )}
+
+            {activeTab === "enroll" && (
+              <div style={{ maxWidth: 640 }}>
+                <EnrollPanel onToast={toast} onRefresh={refresh} />
+              </div>
+            )}
+
+            {activeTab === "verify" && (
+              <div style={{ maxWidth: 640 }}>
+                <VerifyPanel onToast={toast} onRefresh={refresh} />
+              </div>
+            )}
+
+            {activeTab === "data" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                <EnrollmentsTable enrollments={enrollments} />
+                <NullifiersTable nullifiers={nullifiers} />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Toasts */}
+      <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, display: "flex", flexDirection: "column", gap: 12 }}>
+        {toasts.map(t => (
+          <Toast key={t.id} message={t.message} type={t.type} txSig={t.sig}
+            onClose={() => setToasts(prev => prev.filter(x => x.id !== t.id))} />
+        ))}
+      </div>
     </div>
   );
 }

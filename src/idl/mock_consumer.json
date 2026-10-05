@@ -1,0 +1,73 @@
+{
+  "address": "7ZBun553WhQd3iruZoxvDPj46uDjY4bsZZGqa2Aw7i68",
+  "metadata": {
+    "name": "mock_consumer",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Test-only dApp that gates an action behind contract::verify_personhood via CPI"
+  },
+  "instructions": [
+    {
+      "name": "gated_action",
+      "discriminator": [
+        98,
+        180,
+        13,
+        198,
+        77,
+        45,
+        170,
+        51
+      ],
+      "accounts": [
+        {
+          "name": "wallet",
+          "writable": true
+        },
+        {
+          "name": "registry"
+        },
+        {
+          "name": "enrollment"
+        },
+        {
+          "name": "nullifier",
+          "writable": true
+        },
+        {
+          "name": "instructions"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "passport_program",
+          "address": "6yH5EwvxmJbKoVgYPni6NMaLwNChgen23CkF9omvYbDE"
+        }
+      ],
+      "args": [
+        {
+          "name": "commitment",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "merkle_proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

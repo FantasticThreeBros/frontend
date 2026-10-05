@@ -1,0 +1,843 @@
+{
+  "address": "6yH5EwvxmJbKoVgYPni6NMaLwNChgen23CkF9omvYbDE",
+  "metadata": {
+    "name": "contract",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "enroll_identity",
+      "discriminator": [
+        162,
+        5,
+        243,
+        11,
+        123,
+        238,
+        11,
+        79
+      ],
+      "accounts": [
+        {
+          "name": "wallet",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "verifier_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "verifier_config.verifier_key",
+                "account": "VerifierConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "credential_account",
+          "docs": [
+            "The verifier's credential account. Read only, NOT a CPI.",
+            "Step 1 (owner check) is enforced here, before anything is created: without it a",
+            "fabricated account with the same data shape could pass.",
+            "`CredentialReader`."
+          ]
+        },
+        {
+          "name": "registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "enrollment",
+          "docs": [
+            "`init_if_needed` so a duplicate yields our custom `AlreadyEnrolled` instead of the",
+            "system program's generic \"account already in use\"; the handler rejects any",
+            "pre-existing record. The `commitment` arg is only here because the IDL builder can't",
+            "resolve a hash expression in seeds; the handler requires it to equal",
+            "sha256(credential key), so it is fully determined by the credential."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  114,
+                  111,
+                  108,
+                  108,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "commitment"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "commitment",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "merkle_proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "freeze_identity",
+      "discriminator": [
+        224,
+        148,
+        125,
+        223,
+        243,
+        235,
+        171,
+        5
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "registry"
+          ]
+        },
+        {
+          "name": "registry",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "enrollment",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  114,
+                  111,
+                  108,
+                  108,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "commitment"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "commitment",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "frozen",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "initialize_registry",
+      "discriminator": [
+        189,
+        181,
+        20,
+        17,
+        174,
+        57,
+        249,
+        59
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "register_verifier",
+      "discriminator": [
+        67,
+        234,
+        172,
+        169,
+        184,
+        188,
+        145,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "registry"
+          ]
+        },
+        {
+          "name": "registry",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "verifier_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "verifier_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "verifier_key",
+          "type": "pubkey"
+        },
+        {
+          "name": "is_active",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "set_registry_frozen",
+      "discriminator": [
+        116,
+        79,
+        101,
+        131,
+        56,
+        208,
+        180,
+        174
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "registry"
+          ]
+        },
+        {
+          "name": "registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "frozen",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "verify_personhood",
+      "discriminator": [
+        164,
+        119,
+        199,
+        126,
+        141,
+        110,
+        235,
+        179
+      ],
+      "accounts": [
+        {
+          "name": "wallet",
+          "docs": [
+            "Must be an explicit signer: identity is never inferred from the CPI context,",
+            "otherwise any program could probe an arbitrary wallet's enrollment without consent."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "registry",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "enrollment",
+          "docs": [
+            "Binds `commitment` to `wallet` (and supplies the leaf index). Without it any",
+            "signer could present someone else's public commitment and a valid proof."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  114,
+                  111,
+                  108,
+                  108,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "commitment"
+              }
+            ]
+          }
+        },
+        {
+          "name": "nullifier",
+          "docs": [
+            "`init_if_needed` only to return our own `NullifierAlreadyUsed` error on replay."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  110,
+                  117,
+                  108,
+                  108,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "consuming_program_id"
+              },
+              {
+                "kind": "arg",
+                "path": "commitment"
+              }
+            ]
+          }
+        },
+        {
+          "name": "instructions",
+          "docs": [
+            "Used to learn the calling program's id."
+          ],
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "commitment",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "consuming_program_id",
+          "type": "pubkey"
+        },
+        {
+          "name": "merkle_proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "EnrollmentRecord",
+      "discriminator": [
+        73,
+        227,
+        83,
+        189,
+        219,
+        181,
+        30,
+        167
+      ]
+    },
+    {
+      "name": "NullifierRecord",
+      "discriminator": [
+        56,
+        18,
+        57,
+        175,
+        69,
+        202,
+        189,
+        70
+      ]
+    },
+    {
+      "name": "RegistryConfig",
+      "discriminator": [
+        23,
+        118,
+        10,
+        246,
+        173,
+        231,
+        243,
+        156
+      ]
+    },
+    {
+      "name": "VerifierConfig",
+      "discriminator": [
+        176,
+        103,
+        248,
+        36,
+        138,
+        167,
+        176,
+        220
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Signer is not the registry admin"
+    },
+    {
+      "code": 6001,
+      "name": "AlreadyInitialized",
+      "msg": "Registry is already initialized"
+    },
+    {
+      "code": 6002,
+      "name": "VerifierNotActive",
+      "msg": "Verifier is not active"
+    },
+    {
+      "code": 6003,
+      "name": "IdentityFrozen",
+      "msg": "Identity is frozen"
+    },
+    {
+      "code": 6004,
+      "name": "AlreadyEnrolled",
+      "msg": "Identity commitment already enrolled"
+    },
+    {
+      "code": 6005,
+      "name": "NullifierAlreadyUsed",
+      "msg": "Nullifier already used for this application"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidCommitment",
+      "msg": "Invalid identity commitment"
+    },
+    {
+      "code": 6007,
+      "name": "RegistryFrozen",
+      "msg": "Registry is globally frozen"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidCredentialOwner",
+      "msg": "Credential account is not owned by the registered verifier program"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidCredentialData",
+      "msg": "Credential account data could not be parsed"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidProofLength",
+      "msg": "Merkle proof has the wrong length for this tree depth"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidMerkleProof",
+      "msg": "Merkle proof does not match the current registry root"
+    },
+    {
+      "code": 6012,
+      "name": "TreeFull",
+      "msg": "The Merkle tree is full"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidTreeDepth",
+      "msg": "Invalid tree depth"
+    },
+    {
+      "code": 6014,
+      "name": "WalletMismatch",
+      "msg": "Enrollment does not belong to the signing wallet"
+    },
+    {
+      "code": 6015,
+      "name": "NotCalledViaCpi",
+      "msg": "verify_personhood must be invoked via CPI from a consuming program"
+    },
+    {
+      "code": 6016,
+      "name": "ConsumerMismatch",
+      "msg": "consuming_program_id does not match the calling program"
+    }
+  ],
+  "types": [
+    {
+      "name": "EnrollmentRecord",
+      "docs": [
+        "One per unique commitment; its PDA is the one-human-one-identity dedup guard."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "commitment",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "leaf_index",
+            "type": "u32"
+          },
+          {
+            "name": "wallet",
+            "docs": [
+              "Wallet that enrolled. verify_personhood checks the signer against it,",
+              "otherwise any signer could present someone else's public commitment + proof."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "is_frozen",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NullifierRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RegistryConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "is_frozen",
+            "type": "bool"
+          },
+          {
+            "name": "merkle_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "tree_depth",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "next_leaf_index",
+            "docs": [
+              "Index of the next free leaf. enroll_identity needs it to know which tree",
+              "path the client-supplied proof must correspond to."
+            ],
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerifierConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "verifier_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "ENROLLMENT_SEED",
+      "type": "bytes",
+      "value": "[101, 110, 114, 111, 108, 108, 109, 101, 110, 116]"
+    },
+    {
+      "name": "NULLIFIER_SEED",
+      "type": "bytes",
+      "value": "[110, 117, 108, 108, 105, 102, 105, 101, 114]"
+    },
+    {
+      "name": "REGISTRY_SEED",
+      "type": "bytes",
+      "value": "[114, 101, 103, 105, 115, 116, 114, 121]"
+    },
+    {
+      "name": "VERIFIER_CONFIG_SEED",
+      "type": "bytes",
+      "value": "[118, 101, 114, 105, 102, 105, 101, 114, 95, 99, 111, 110, 102, 105, 103]"
+    }
+  ]
+}
