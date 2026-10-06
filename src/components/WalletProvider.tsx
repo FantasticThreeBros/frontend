@@ -6,7 +6,8 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-const DEVNET_RPC = "https://api.devnet.solana.com";
+// Set NEXT_PUBLIC_RPC_URL to a dedicated endpoint (the public devnet one rate-limits).
+const DEVNET_RPC = process.env.NEXT_PUBLIC_RPC_URL ?? "https://api.devnet.solana.com";
 
 export function WalletContextProvider({ children }: { children: React.ReactNode }) {
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);

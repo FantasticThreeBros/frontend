@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePassport } from "@/hooks/usePassport";
 import { Database, Lock, Unlock, Play } from "lucide-react";
+import { explainError } from "@/lib/passportClient";
 
 interface Props {
   registry: any;
@@ -21,7 +22,7 @@ export function RegistryPanel({ registry, onRefresh, onToast }: Props) {
       onToast("Registry initialized!", "success", sig);
       onRefresh();
     } catch (e: any) {
-      onToast(e?.message ?? "Failed", "error");
+      onToast(explainError(e), "error");
     } finally { setLoading(false); }
   };
 
@@ -32,7 +33,7 @@ export function RegistryPanel({ registry, onRefresh, onToast }: Props) {
       onToast(frozen ? "Registry frozen!" : "Registry unfrozen!", "success", sig);
       onRefresh();
     } catch (e: any) {
-      onToast(e?.message ?? "Failed", "error");
+      onToast(explainError(e), "error");
     } finally { setLoading(false); }
   };
 

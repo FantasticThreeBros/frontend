@@ -1,8 +1,9 @@
 
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePassport } from "@/hooks/usePassport";
 import { ShieldCheck, Lock, Unlock, CheckCircle2 } from "lucide-react";
+import { explainError } from "@/lib/passportClient";
 
 interface Props {
   onToast: (m: string, t?: "success"|"error"|"info", sig?: string) => void;
@@ -10,11 +11,23 @@ interface Props {
 }
 
 export function VerifyPanel({ onToast, onRefresh }: Props) {
-  const { verifyPersonhood, freezeIdentity, connected } = usePassport();
+  const { verifyPersonhood, freezeIdentity, fetchAllEnrollments, connected, publicKey } = usePassport();
   const [commitment, setCommitment] = useState("");
   const [loading, setLoading] = useState(false);
   const [freezeLoading, setFreezeLoading] = useState(false);
   const [txSig, setTxSig] = useState<string | null>(null);
+
+  // Prefill with this wallet's own enrollment (falls back to the last one enrolled in this browser).
+  useEffect(() => {
+    if (commitment || !publicKey) return;
+    (async () => {
+      try {
+        const mine = (await fetchAllEnrollments()).find((e: any) => e.account.wallet.equals(publicKey));
+        if (mine) { setCommitment(Buffer.from(mine.account.commitment).toString("hex")); return; }
+      } catch { /* fall through */ }
+      try { const saved = localStorage.getItem("passport:commitment"); if (saved) setCommitment(saved); } catch { /* optional */ }
+    })();
+  }, [publicKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const doVerify = async () => {
     if (!commitment.trim()) { onToast("Enter commitment hex", "error"); return; }
@@ -26,7 +39,7 @@ export function VerifyPanel({ onToast, onRefresh }: Props) {
       onToast("Personhood verified! Nullifier created.", "success", sig);
       onRefresh();
     } catch (e: any) {
-      onToast(e?.message ?? "Verification failed", "error");
+      onToast(explainError(e), "error");
     } finally { setLoading(false); }
   };
 
@@ -38,7 +51,7 @@ export function VerifyPanel({ onToast, onRefresh }: Props) {
       onToast(`Identity ${frozen ? "frozen" : "unfrozen"}!`, "success", sig);
       onRefresh();
     } catch (e: any) {
-      onToast(e?.message ?? "Failed", "error");
+      onToast(explainError(e), "error");
     } finally { setFreezeLoading(false); }
   };
 
