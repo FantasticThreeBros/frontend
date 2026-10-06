@@ -129,7 +129,7 @@ export default function Home() {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 24 }}>
             <div style={{ textAlign: "center" }}>
               <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 16 }}>
-                Privacy-preserving Proof-of-Personhood
+                Proof-of-Personhood for Solana apps
               </h1>
               <p style={{ color: "var(--muted)", fontSize: 18, maxWidth: 600, lineHeight: 1.6, margin: "0 auto" }}>
                 One human, one identity. Connect your wallet to interact with the on-chain registry.
@@ -139,9 +139,9 @@ export default function Home() {
             
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginTop: 48, width: "100%", maxWidth: 900 }}>
               {[
-                { icon: Fingerprint, title: "Enroll Anonymously", desc: "Commit your identity to the Merkle tree using a credential — no PII on-chain." },
+                { icon: Fingerprint, title: "Enroll Once", desc: "Commit a hash of your Civic Pass to the Merkle tree. No personal data on-chain." },
                 { icon: ShieldCheck, title: "Prove Personhood", desc: "dApps verify you're human via CPI; per-app nullifiers prevent replay." },
-                { icon: Activity, title: "Privacy-preserving", desc: "sha256 commitment + zero-knowledge Merkle proofs keep you private." },
+                { icon: Activity, title: "Pseudonymous", desc: "Only a sha256 commitment is stored. Zero-knowledge proofs are the planned next step." },
               ].map(f => (
                 <div key={f.title} className="card" style={{ padding: 24 }}>
                   <f.icon size={24} style={{ marginBottom: 16, color: "var(--text)" }} />
@@ -170,9 +170,9 @@ export default function Home() {
                   <div className="card" style={{ padding: 24 }}>
                     <div className="section-title"><Database size={20}/> How it Works</div>
                     <ol style={{ fontSize: 14, color: "var(--muted)", lineHeight: 2.2, paddingLeft: 16 }}>
-                      <li><b style={{ color: "var(--text)" }}>Admin</b> initializes the registry + registers a verifier program</li>
-                      <li><b style={{ color: "var(--text)" }}>User</b> creates a credential owned by the verifier, derives commitment = sha256(cred pubkey)</li>
-                      <li><b style={{ color: "var(--text)" }}>Enroll</b>: commitment added to the on-chain Merkle tree (deduplicated)</li>
+                      <li><b style={{ color: "var(--text)" }}>Admin</b> initializes the registry and trusts a verifier program and its Civic network</li>
+                      <li><b style={{ color: "var(--text)" }}>User</b> holds a Civic Pass; commitment = sha256(pass address)</li>
+                      <li><b style={{ color: "var(--text)" }}>Enroll</b>: pass checked (owner, network, active, expiry, your wallet), commitment added to the Merkle tree</li>
                       <li><b style={{ color: "var(--text)" }}>dApp</b> calls <code>verify_personhood</code> via CPI → creates nullifier</li>
                       <li><b style={{ color: "var(--text)" }}>Replay</b> fails with <code>NullifierAlreadyUsed</code></li>
                     </ol>

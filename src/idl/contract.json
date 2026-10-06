@@ -53,6 +53,11 @@
                 "kind": "account",
                 "path": "verifier_config.verifier_key",
                 "account": "VerifierConfig"
+              },
+              {
+                "kind": "account",
+                "path": "verifier_config.gatekeeper_network",
+                "account": "VerifierConfig"
               }
             ]
           }
@@ -322,6 +327,11 @@
         },
         {
           "name": "verifier_config",
+          "docs": [
+            "One config per (verifier program, issuing network) pair: the network is part of the",
+            "address, so trusting a network is an explicit admin act, and a verifier can trust",
+            "several networks (e.g. Uniqueness and Liveness) independently."
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -348,6 +358,10 @@
               {
                 "kind": "arg",
                 "path": "verifier_key"
+              },
+              {
+                "kind": "arg",
+                "path": "gatekeeper_network"
               }
             ]
           }
@@ -360,6 +374,10 @@
       "args": [
         {
           "name": "verifier_key",
+          "type": "pubkey"
+        },
+        {
+          "name": "gatekeeper_network",
           "type": "pubkey"
         },
         {
@@ -701,6 +719,21 @@
       "code": 6016,
       "name": "ConsumerMismatch",
       "msg": "consuming_program_id does not match the calling program"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidCredentialNetwork",
+      "msg": "Credential was issued by a different network than the one this verifier trusts"
+    },
+    {
+      "code": 6018,
+      "name": "CredentialNotActive",
+      "msg": "Credential is not active (frozen or revoked)"
+    },
+    {
+      "code": 6019,
+      "name": "CredentialExpired",
+      "msg": "Credential has expired"
     }
   ],
   "types": [
@@ -740,6 +773,20 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "enrolled_at",
+            "docs": [
+              "Unix timestamp of enrollment."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "credential",
+            "docs": [
+              "The verifier credential account this enrollment was derived from (audit trail)."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -804,6 +851,17 @@
         "fields": [
           {
             "name": "verifier_key",
+            "docs": [
+              "Program that owns credential accounts (for Civic: the gateway program)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "gatekeeper_network",
+            "docs": [
+              "The one issuing network / pass type we trust. Without pinning it, anyone could create",
+              "their own network under the same program and mint themselves a valid-looking pass."
+            ],
             "type": "pubkey"
           },
           {

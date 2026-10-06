@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { usePassport } from "@/hooks/usePassport";
 import { Fingerprint, CheckCircle2, ArrowUpRight, Copy } from "lucide-react";
+import { explainError, PassMode } from "@/lib/passportClient";
+import { UNIQUENESS_NETWORK } from "@/lib/pdas";
 
 interface Props {
   onToast: (m: string, t?: "success"|"error"|"info", sig?: string) => void;
@@ -11,21 +13,23 @@ interface Props {
 
 export function EnrollPanel({ onToast, onRefresh }: Props) {
   const { enrollIdentity, connected } = usePassport();
-  const [verifierKey, setVerifierKey] = useState("");
+  const [mode, setMode] = useState<PassMode>("demo");
+  const [network, setNetwork] = useState(UNIQUENESS_NETWORK);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ commitment: string; leafIndex: number; sig: string } | null>(null);
 
   const doEnroll = async () => {
-    if (!verifierKey.trim()) { onToast("Enter the verifier program key", "error"); return; }
+    if (!network.trim()) { onToast("Enter the Civic network", "error"); return; }
     setLoading(true);
     setResult(null);
     try {
-      const r = await enrollIdentity(verifierKey.trim());
+      const r = await enrollIdentity(mode, network.trim());
+      try { localStorage.setItem("passport:commitment", r.commitment); } catch { /* optional */ }
       setResult(r);
       onToast(`Enrolled successfully`, "success", r.sig);
       onRefresh();
     } catch (e: any) {
-      onToast(e?.message ?? "Enrollment failed", "error");
+      onToast(explainError(e), "error");
     } finally { setLoading(false); }
   };
 
@@ -42,20 +46,29 @@ export function EnrollPanel({ onToast, onRefresh }: Props) {
         <div className="section-title">
           <Fingerprint size={20} /> Enroll Identity
         </div>
-        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24, lineHeight: 1.6 }}>
-          Creates a fresh credential account owned by the verifier program, derives your commitment
-          (sha256 of the credential pubkey), and appends it to the on-chain Merkle tree.
+        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 20, lineHeight: 1.6 }}>
+          Reads a Civic Pass issued to <b>your wallet</b>, derives your commitment (sha256 of the pass address)
+          and adds it to the on-chain Merkle tree. The registry checks the pass owner, issuing network,
+          active state, expiry, and that the pass is yours.
         </p>
-        <label className="label">Verifier Program Address</label>
-        <input
-          className="input mono"
-          value={verifierKey}
-          onChange={e => setVerifierKey(e.target.value)}
-          placeholder="Base58 public key of the trusted verifier..."
-          spellCheck={false}
-        />
+        <label className="label">Pass source</label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          <button className={`btn ${mode === "demo" ? "btn-primary" : "btn-secondary"}`} onClick={() => setMode("demo")}>
+            Demo pass (mock issuer)
+          </button>
+          <button className={`btn ${mode === "civic" ? "btn-primary" : "btn-secondary"}`} onClick={() => setMode("civic")}>
+            My real Civic Pass
+          </button>
+        </div>
+        <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16, lineHeight: 1.5 }}>
+          {mode === "demo"
+            ? "A demo issuer writes a pass in Civic's exact layout for your wallet. Requires the demo issuer to be registered in the Admin tab."
+            : "Uses the Civic Pass already held by your wallet on this network. Requires the Civic gateway to be registered in the Admin tab."}
+        </p>
+        <label className="label">Gatekeeper Network</label>
+        <input className="input mono" value={network} onChange={e => setNetwork(e.target.value)} spellCheck={false} />
         <button className="btn btn-primary" disabled={loading || !connected} onClick={doEnroll} style={{ marginTop: 20, width: "100%" }}>
-          {loading ? <><span className="spinner" /> Enrolling (2 txs)...</> : "Enroll My Identity"}
+          {loading ? <><span className="spinner" /> Enrolling...</> : "Enroll My Identity"}
         </button>
       </div>
 

@@ -68,6 +68,86 @@
           }
         }
       ]
+    },
+    {
+      "name": "issue_demo_pass",
+      "docs": [
+        "TEST/DEMO ONLY: plays the role of the Civic gateway program by writing an account in",
+        "Civic's exact `GatewayToken` borsh layout (owned by this program). Lets tests and the",
+        "devnet demo enroll without a real Civic pass; register this program's id as the",
+        "verifier to use it. Real deployments register Civic's gateway program instead."
+      ],
+      "discriminator": [
+        29,
+        54,
+        198,
+        198,
+        178,
+        158,
+        168,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pass",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  109,
+                  111,
+                  95,
+                  112,
+                  97,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "owner_wallet"
+              },
+              {
+                "kind": "arg",
+                "path": "network"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "owner_wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "network",
+          "type": "pubkey"
+        },
+        {
+          "name": "state",
+          "type": "u8"
+        },
+        {
+          "name": "expire_time",
+          "type": {
+            "option": "i64"
+          }
+        }
+      ]
     }
   ]
 }
