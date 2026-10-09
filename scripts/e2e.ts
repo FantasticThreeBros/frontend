@@ -7,7 +7,7 @@ import { AnchorProvider, Program, Wallet } from "@anchor-lang/core";
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import contractIdl from "../src/idl/contract.json";
 import consumerIdl from "../src/idl/mock_consumer.json";
-import { pdas, MOCK_CONSUMER_ID, UNIQUENESS_NETWORK } from "../src/lib/pdas";
+import { pdas, MOCK_CONSUMER_ID, CIVIC_GATEWAY_ID, UNIQUENESS_NETWORK } from "../src/lib/pdas";
 import { buildTree, enrollIdentity, verifyPersonhood, registerVerifier, explainError, WalletLike } from "../src/lib/passportClient";
 
 const RPC = process.env.RPC_URL ?? "http://127.0.0.1:8899";
@@ -43,12 +43,17 @@ async function newUser(): Promise<Keypair> {
 
 (async () => {
   const network = new PublicKey(UNIQUENESS_NETWORK);
+  if (!(await connection.getAccountInfo(pdas.registry()))) {
+    await (passport.methods as any).initializeRegistry().accountsPartial({ registry: pdas.registry() }).rpc();
+    console.log("(initialized a fresh registry)");
+  }
   const reg0 = await (passport.account as any).registryConfig.fetch(pdas.registry());
   check("registry exists and admin matches", reg0.admin.equals(admin.publicKey), `(next leaf ${reg0.nextLeafIndex})`);
 
   // admin: trust the demo issuer + Uniqueness network
   await registerVerifier({ connection, passport, wallet: asWallet(admin), verifier: MOCK_CONSUMER_ID, network, isActive: true });
-  check("admin registers verifier + network", true);
+  await registerVerifier({ connection, passport, wallet: asWallet(admin), verifier: CIVIC_GATEWAY_ID, network, isActive: true });
+  check("admin registers the demo issuer and the Civic gateway", true);
 
   // user A: demo pass -> enroll -> verify -> replay blocked
   const a = await newUser();
@@ -75,7 +80,8 @@ async function newUser(): Promise<Keypair> {
   const c = await newUser();
   await expectError("real Civic mode without a pass says so", enrollIdentity({ connection, passport, consumer, wallet: asWallet(c), mode: "civic", network }), "No Civic Pass");
   const rogue = Keypair.generate().publicKey;
-  await expectError("a network the admin never registered is rejected", enrollIdentity({ connection, passport, consumer, wallet: asWallet(c), mode: "demo", network: rogue }), "not registered");
+  await expectError("a network the admin never registered is rejected", enrollIdentity({ connection, passport, consumer, wallet: asWallet(c), mode: "demo", network: rogue }), "does not trust");
+  check("...and no pass was issued (no rent wasted)", (await connection.getAccountInfo(pdas.demoPass(c.publicKey, rogue))) === null);
 
   console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   process.exit(failures === 0 ? 0 : 1);

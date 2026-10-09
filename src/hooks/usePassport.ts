@@ -8,7 +8,7 @@ import consumerIdl from "@/idl/mock_consumer.json";
 import { pdas } from "@/lib/pdas";
 import {
   buildTree, enrollIdentity as enrollIdentityTx, verifyPersonhood as verifyPersonhoodTx,
-  registerVerifier as registerVerifierTx, PassMode, WalletLike,
+  registerVerifier as registerVerifierTx, decodeAll, fetchVerifierStatus, PassMode, WalletLike,
 } from "@/lib/passportClient";
 
 export function usePassport() {
@@ -49,18 +49,23 @@ export function usePassport() {
 
   const fetchAllEnrollments = useCallback(async () => {
     if (!passport) return [];
-    const records = (await (passport.account as any).enrollmentRecord.all()) as any[];
+    const records = await decodeAll(connection, passport, "EnrollmentRecord");
     return records.sort((a: any, b: any) => a.account.leafIndex - b.account.leafIndex);
-  }, [passport]);
+  }, [connection, passport]);
 
   const fetchAllNullifiers = useCallback(async () => {
     if (!passport) return [];
-    return (await (passport.account as any).nullifierRecord.all()) as any[];
-  }, [passport]);
+    return decodeAll(connection, passport, "NullifierRecord");
+  }, [connection, passport]);
 
   const fetchAllVerifiers = useCallback(async () => {
     if (!passport) return [];
-    return (await (passport.account as any).verifierConfig.all()) as any[];
+    return decodeAll(connection, passport, "VerifierConfig");
+  }, [connection, passport]);
+
+  const verifierStatus = useCallback(async (mode: PassMode, network: string) => {
+    if (!passport) return null;
+    try { return await fetchVerifierStatus(passport, mode, new PublicKey(network)); } catch { return null; }
   }, [passport]);
 
   const initializeRegistry = useCallback(async () => {
@@ -105,7 +110,7 @@ export function usePassport() {
     connected: !!wallet.publicKey,
     publicKey: wallet.publicKey,
     passport, consumer, provider,
-    fetchRegistry, fetchAllEnrollments, fetchAllNullifiers, fetchAllVerifiers,
+    fetchRegistry, fetchAllEnrollments, fetchAllNullifiers, fetchAllVerifiers, verifierStatus,
     initializeRegistry, registerVerifier, setRegistryFrozen, freezeIdentity,
     enrollIdentity, verifyPersonhood, rebuildTree,
   };
