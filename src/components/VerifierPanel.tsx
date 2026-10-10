@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { usePassport } from "@/hooks/usePassport";
 import { KeyRound, Check, Ban, AlertCircle } from "lucide-react";
 import { explainError } from "@/lib/passportClient";
-import { MOCK_CONSUMER_ID, CIVIC_GATEWAY_ID, UNIQUENESS_NETWORK } from "@/lib/pdas";
+import { MOCK_CONSUMER_ID, CIVIC_GATEWAY_ID } from "@/lib/pdas";
+import { DEFAULT_NETWORK, NETWORK_PRESETS } from "@/lib/networks";
 
 interface Props {
   onToast: (m: string, t?: "success"|"error"|"info", sig?: string) => void;
@@ -12,7 +13,7 @@ interface Props {
 export function VerifierPanel({ onToast }: Props) {
   const { registerVerifier, fetchAllVerifiers, connected, passport } = usePassport();
   const [verifierKey, setVerifierKey] = useState("");
-  const [network, setNetwork] = useState(UNIQUENESS_NETWORK);
+  const [network, setNetwork] = useState(DEFAULT_NETWORK.toBase58());
   const [loading, setLoading] = useState(false);
   const [configs, setConfigs] = useState<any[]>([]);
 
@@ -42,12 +43,11 @@ export function VerifierPanel({ onToast }: Props) {
       </p>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        <button className="btn btn-secondary" onClick={() => { setVerifierKey(CIVIC_GATEWAY_ID.toBase58()); setNetwork(UNIQUENESS_NETWORK); }}>
-          Preset: Civic gateway + Uniqueness
-        </button>
-        <button className="btn btn-secondary" onClick={() => { setVerifierKey(MOCK_CONSUMER_ID.toBase58()); setNetwork(UNIQUENESS_NETWORK); }}>
-          Preset: Demo issuer
-        </button>
+        <button className="btn btn-secondary" onClick={() => setVerifierKey(CIVIC_GATEWAY_ID.toBase58())}>Issuer: Civic</button>
+        <button className="btn btn-secondary" onClick={() => setVerifierKey(MOCK_CONSUMER_ID.toBase58())}>Issuer: Demo pass</button>
+        {NETWORK_PRESETS.map((n) => (
+          <button key={n.key} className="btn btn-secondary" onClick={() => setNetwork(n.key)}>{n.label}</button>
+        ))}
       </div>
 
       <label className="label">Verifier Program Address</label>

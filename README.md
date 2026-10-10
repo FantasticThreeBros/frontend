@@ -18,14 +18,21 @@ Optional env (`.env.local`):
 | `NEXT_PUBLIC_PROGRAM_ID` | `6yH5Ew...` | registry program (also update `src/idl/*.json` if you redeploy under a new id) |
 | `NEXT_PUBLIC_MOCK_CONSUMER_ID` | `7ZBun5...` | demo dApp / demo pass issuer |
 
-## Flow
+## Flow (what a user sees)
 
-1. **Admin** tab: initialize the registry, then register a verifier **and the Civic network it may
-   issue** (presets for the Civic gateway and the demo issuer). The network is part of the config
-   address, so trusting a network is an explicit admin act.
-2. **Enroll** tab: use a demo pass (written by the demo issuer in Civic's exact layout) or your real
-   Civic Pass. The registry checks owner, network, active state, expiry and that the pass is yours.
-3. **Verify** tab: the demo dApp calls `verify_personhood` by CPI. Repeating it fails (nullifier).
+**Get verified** tab, four steps, with automatic status detection:
+1. Connect your wallet.
+2. Get a pass: a **demo pass** (instant, for trying the app) or **your Civic Pass**. If you have no Civic Pass the
+   page walks you through getting one (link to Civic, your wallet address to copy, "check again", auto-checks every 8 s).
+3. Join the registry (one pass, one spot).
+4. Try it in a demo app, then try again to see the replay get blocked.
+
+**Admin** tab: **Quick setup** (one click: creates the registry if needed and trusts Civic + the demo pass on the devnet
+test network and the Uniqueness network), registry freeze, freeze one identity, advanced issuer management.
+**Explorer** tab: public on-chain data.
+
+> On devnet the app trusts Civic's **devnet test network** (`tgnuXX...`). The Uniqueness network is mainnet-only, so a
+> devnet wallet can never hold that pass.
 
 ## Architecture
 
@@ -42,8 +49,20 @@ Optional env (`.env.local`):
 RPC_URL=http://127.0.0.1:8899 ADMIN_KEYPAIR=~/.config/solana/id.json npm run e2e
 ```
 
-Runs the same module the UI uses: register verifier, enroll, verify, replay blocked, duplicate enroll,
-wrong wallet, missing Civic pass, unregistered network. `ADMIN_KEYPAIR` must be the registry admin.
+Runs the same module the UI uses (23 checks): quick setup, status detection, enroll, verify, replay blocked, duplicate
+enroll, wrong wallet, missing Civic pass, unregistered network, Civic pass parsing against real devnet accounts.
+`ADMIN_KEYPAIR` must be the registry admin (or the registry must not exist yet).
+
+## Browser test (real UI, mock wallet)
+
+Drives the actual pages in headless Chromium with an injected Phantom-compatible wallet that signs in Node.
+
+```bash
+npm i --no-save playwright tweetnacl
+NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8899 npm run dev -- -p 3200      # in one terminal; local validator running
+APP_URL=http://localhost:3200 node scripts/ui-e2e.js                   # admin Quick setup, then a user: join, verify, replay blocked
+```
+Screenshots go to `scripts/ui-shots/`.
 
 ## Honest limits
 

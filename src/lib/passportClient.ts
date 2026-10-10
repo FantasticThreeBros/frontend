@@ -7,6 +7,8 @@ import {
 import { BN, utils } from "@anchor-lang/core";
 import { pdas, MOCK_CONSUMER_ID, PROGRAM_ID, CIVIC_GATEWAY_ID } from "./pdas";
 import { SparseTree, commitmentOf } from "./merkle";
+import { parseCivicToken, passState, PassState } from "./civic";
+import { NETWORK_PRESETS } from "./networks";
 
 export interface WalletLike {
   publicKey: PublicKey;
@@ -207,4 +209,68 @@ export function explainError(e: any): string {
   if (text.includes("User rejected")) return "Request cancelled in the wallet.";
   if (text.includes("429")) return "RPC rate limit hit. Wait a moment, or set NEXT_PUBLIC_RPC_URL to a dedicated endpoint.";
   return e?.message ?? "Something went wrong";
+}
+
+
+export interface MyStatus {
+  registry: "missing" | "ready" | "frozen";
+  admin: string | null;
+  isAdmin: boolean;
+  trust: { demo: VerifierStatus; civic: VerifierStatus };
+  civicPass: PassState;
+  demoPassExists: boolean;
+  enrollment: { commitment: string; leafIndex: number; frozen: boolean } | null;
+  verified: boolean;
+}
+
+/** Everything the guided UI needs to know about this wallet, in one call. */
+export async function loadMyStatus(opts: { connection: Connection; passport: Prog; wallet: PublicKey; network: PublicKey }): Promise<MyStatus> {
+  const { connection, passport, wallet, network } = opts;
+  const reg = await passport.account.registryConfig.fetchNullable(pdas.registry());
+  const [demo, civic] = await Promise.all([
+    fetchVerifierStatus(passport, "demo", network), fetchVerifierStatus(passport, "civic", network),
+  ]);
+  const civicInfo = await connection.getAccountInfo(pdas.civicPass(wallet, network));
+  const demoInfo = await connection.getAccountInfo(pdas.demoPass(wallet, network));
+  const mine = (await decodeAll(connection, passport, "EnrollmentRecord")).find((e) => e.account.wallet.equals(wallet));
+  let enrollment: MyStatus["enrollment"] = null;
+  let verified = false;
+  if (mine) {
+    enrollment = { commitment: Buffer.from(mine.account.commitment).toString("hex"), leafIndex: mine.account.leafIndex, frozen: !!mine.account.isFrozen };
+    verified = !!(await connection.getAccountInfo(pdas.nullifier(MOCK_CONSUMER_ID, mine.account.commitment)));
+  }
+  return {
+    registry: !reg ? "missing" : reg.isFrozen ? "frozen" : "ready",
+    admin: reg ? reg.admin.toBase58() : null,
+    isAdmin: !!reg && reg.admin.equals(wallet),
+    trust: { demo, civic },
+    civicPass: passState(civicInfo ? parseCivicToken(civicInfo.data) : null, !!civicInfo, wallet, network),
+    demoPassExists: !!demoInfo,
+    enrollment, verified,
+  };
+}
+
+/**
+ * Admin one-click setup: trust the Civic gateway and the demo issuer on every preset network.
+ * Skips pairs that are already active. Returns what it did, for display.
+ */
+export async function quickSetup(opts: { connection: Connection; passport: Prog; wallet: WalletLike; onProgress?: (msg: string) => void }) {
+  const { connection, passport, wallet, onProgress } = opts;
+  if (!(await passport.account.registryConfig.fetchNullable(pdas.registry()))) {
+    const ix = await passport.methods.initializeRegistry().accountsPartial({ registry: pdas.registry() }).instruction();
+    onProgress?.("Creating the registry...");
+    await sendTx(connection, wallet, [ix]);
+  }
+  const done: string[] = [];
+  for (const net of NETWORK_PRESETS) {
+    const network = new PublicKey(net.key);
+    for (const [verifier, name] of [[CIVIC_GATEWAY_ID, "Civic"], [MOCK_CONSUMER_ID, "Demo pass"]] as const) {
+      const cfg = await passport.account.verifierConfig.fetchNullable(pdas.verifierConfig(verifier, network));
+      if (cfg?.isActive) continue;
+      onProgress?.(`Trusting ${name} on ${net.label}...`);
+      await registerVerifier({ connection, passport, wallet, verifier, network, isActive: true });
+      done.push(`${name} / ${net.label}`);
+    }
+  }
+  return done;
 }
