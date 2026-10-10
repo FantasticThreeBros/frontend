@@ -10,8 +10,7 @@ export const MOCK_CONSUMER_ID = new PublicKey(
 
 /** Civic's gateway program: owns every Civic Pass account (same id on devnet and mainnet). */
 export const CIVIC_GATEWAY_ID = new PublicKey("gatem74V238djXdzWnJf94Wo1DcnuGkfijbf3AuBhfs");
-/** Civic Uniqueness Pass network (from Civic's repo; confirm in Civic's dashboard). */
-export const UNIQUENESS_NETWORK = "uniqobk8oGh4XBLMqM68K8M2zNu3CdYX7q5go7whQiv";
+export { UNIQUENESS_NETWORK } from "./networks";
 
 const find = (seeds: (Buffer | Uint8Array)[], programId = PROGRAM_ID) =>
   PublicKey.findProgramAddressSync(seeds, programId)[0];

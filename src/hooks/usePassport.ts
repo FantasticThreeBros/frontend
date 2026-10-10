@@ -8,7 +8,7 @@ import consumerIdl from "@/idl/mock_consumer.json";
 import { pdas } from "@/lib/pdas";
 import {
   buildTree, enrollIdentity as enrollIdentityTx, verifyPersonhood as verifyPersonhoodTx,
-  registerVerifier as registerVerifierTx, decodeAll, fetchVerifierStatus, PassMode, WalletLike,
+  registerVerifier as registerVerifierTx, decodeAll, fetchVerifierStatus, loadMyStatus, quickSetup, PassMode, WalletLike,
 } from "@/lib/passportClient";
 
 export function usePassport() {
@@ -68,6 +68,16 @@ export function usePassport() {
     try { return await fetchVerifierStatus(passport, mode, new PublicKey(network)); } catch { return null; }
   }, [passport]);
 
+  const loadStatus = useCallback(async (network: string) => {
+    if (!passport || !wallet.publicKey) return null;
+    return loadMyStatus({ connection, passport, wallet: wallet.publicKey, network: new PublicKey(network) });
+  }, [connection, passport, wallet.publicKey]);
+
+  const runQuickSetup = useCallback(async (onProgress?: (m: string) => void) => {
+    if (!passport) throw new Error("Not connected");
+    return quickSetup({ connection, passport, wallet: walletLike(), onProgress });
+  }, [connection, passport, walletLike]);
+
   const initializeRegistry = useCallback(async () => {
     if (!passport) throw new Error("Not connected");
     return (passport.methods as any).initializeRegistry()
@@ -110,7 +120,7 @@ export function usePassport() {
     connected: !!wallet.publicKey,
     publicKey: wallet.publicKey,
     passport, consumer, provider,
-    fetchRegistry, fetchAllEnrollments, fetchAllNullifiers, fetchAllVerifiers, verifierStatus,
+    fetchRegistry, fetchAllEnrollments, fetchAllNullifiers, fetchAllVerifiers, verifierStatus, loadStatus, runQuickSetup,
     initializeRegistry, registerVerifier, setRegistryFrozen, freezeIdentity,
     enrollIdentity, verifyPersonhood, rebuildTree,
   };
