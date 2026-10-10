@@ -54,6 +54,36 @@ export async function buildTree(connection: Connection, passport: Prog): Promise
 
 export type PassMode = "demo" | "civic";
 
+/** Which program issues passes in this mode. */
+export const verifierFor = (mode: PassMode) => (mode === "civic" ? CIVIC_GATEWAY_ID : MOCK_CONSUMER_ID);
+
+export type VerifierStatus = "active" | "inactive" | "missing";
+
+/** Has the admin registered (and not deactivated) this verifier + network pair? */
+export async function fetchVerifierStatus(passport: Prog, mode: PassMode, network: PublicKey): Promise<VerifierStatus> {
+  const cfg = await passport.account.verifierConfig.fetchNullable(pdas.verifierConfig(verifierFor(mode), network));
+  if (!cfg) return "missing";
+  return cfg.isActive ? "active" : "inactive";
+}
+
+/**
+ * Fetch every account of one type, skipping any that no longer decode. Accounts written by older
+ * program versions can have a different size; `program.account.X.all()` throws on those and would
+ * take the whole list down with it.
+ */
+export async function decodeAll(connection: Connection, passport: Prog, idlName: string): Promise<{ publicKey: PublicKey; account: any }[]> {
+  const def = passport.idl.accounts.find((a: any) => a.name.toLowerCase() === idlName.toLowerCase());
+  const raw = await connection.getProgramAccounts(PROGRAM_ID, {
+    filters: [{ memcmp: { offset: 0, bytes: utils.bytes.bs58.encode(Buffer.from(def.discriminator)) } }],
+  });
+  const out: { publicKey: PublicKey; account: any }[] = [];
+  for (const r of raw) {
+    try { out.push({ publicKey: r.pubkey, account: passport.coder.accounts.decode(def.name, Buffer.from(r.account.data)) }); }
+    catch { /* legacy layout: skip */ }
+  }
+  return out;
+}
+
 /** Which program owns the pass, and where it lives, for this wallet and network. */
 export function passFor(mode: PassMode, wallet: PublicKey, network: PublicKey) {
   return mode === "civic"
@@ -67,6 +97,13 @@ export async function enrollIdentity(opts: {
 }) {
   const { connection, passport, consumer, wallet, mode, network } = opts;
   const { verifier, credential } = passFor(mode, wallet.publicKey, network);
+
+  // Fail fast, before spending rent on issuing a pass that could never be enrolled.
+  const status = await fetchVerifierStatus(passport, mode, network);
+  if (status === "missing") {
+    throw new Error(`This registry does not trust ${mode === "civic" ? "the Civic gateway" : "the demo issuer"} on network ${network.toBase58()} yet. Ask the registry admin to register it in the Admin tab.`);
+  }
+  if (status === "inactive") throw new Error("VerifierNotActive");
 
   const existing = await connection.getAccountInfo(credential);
   if (!existing) {
@@ -158,12 +195,14 @@ const ERROR_HINTS: Record<string, string> = {
   InvalidMerkleProof: "Merkle proof is stale (someone enrolled meanwhile). Try again.",
   Unauthorized: "Only the registry admin can do this.",
   AccountNotInitialized: "Not registered yet: the admin must register this verifier and network (Admin tab).",
+  "does not trust": "",
 };
 
 /** Turn a raw wallet/RPC/Anchor error into a sentence a person can act on. */
 export function explainError(e: any): string {
   const text = [e?.message, e?.error?.errorMessage, ...(e?.logs ?? []), ...(e?.transactionLogs ?? [])].join("\n");
-  for (const [name, hint] of Object.entries(ERROR_HINTS)) if (text.includes(name)) return hint;
+  if (text.includes("does not trust")) return e.message; // already a full sentence
+  for (const [name, hint] of Object.entries(ERROR_HINTS)) if (hint && text.includes(name)) return hint;
   if (text.includes("signer privilege escalated")) return "The wallet did not sign the transaction.";
   if (text.includes("User rejected")) return "Request cancelled in the wallet.";
   if (text.includes("429")) return "RPC rate limit hit. Wait a moment, or set NEXT_PUBLIC_RPC_URL to a dedicated endpoint.";

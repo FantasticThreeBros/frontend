@@ -1,6 +1,6 @@
 
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePassport } from "@/hooks/usePassport";
 import { Fingerprint, CheckCircle2, ArrowUpRight, Copy } from "lucide-react";
 import { explainError, PassMode } from "@/lib/passportClient";
@@ -12,11 +12,19 @@ interface Props {
 }
 
 export function EnrollPanel({ onToast, onRefresh }: Props) {
-  const { enrollIdentity, connected } = usePassport();
+  const { enrollIdentity, verifierStatus, connected } = usePassport();
+  const [status, setStatus] = useState<"active" | "inactive" | "missing" | null>(null);
   const [mode, setMode] = useState<PassMode>("demo");
   const [network, setNetwork] = useState(UNIQUENESS_NETWORK);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ commitment: string; leafIndex: number; sig: string } | null>(null);
+
+  // Tell the user up front whether the registry trusts this pass source (admin must register it).
+  useEffect(() => {
+    let live = true;
+    verifierStatus(mode, network.trim()).then((st) => { if (live) setStatus(st); });
+    return () => { live = false; };
+  }, [mode, network, verifierStatus]);
 
   const doEnroll = async () => {
     if (!network.trim()) { onToast("Enter the Civic network", "error"); return; }
@@ -67,7 +75,14 @@ export function EnrollPanel({ onToast, onRefresh }: Props) {
         </p>
         <label className="label">Gatekeeper Network</label>
         <input className="input mono" value={network} onChange={e => setNetwork(e.target.value)} spellCheck={false} />
-        <button className="btn btn-primary" disabled={loading || !connected} onClick={doEnroll} style={{ marginTop: 20, width: "100%" }}>
+        {status && (
+          <p style={{ fontSize: 13, marginTop: 12, color: status === "active" ? "var(--success)" : "var(--danger, #dc2626)" }}>
+            {status === "active" && "Registered: the registry trusts this pass source."}
+            {status === "inactive" && "This pass source is registered but deactivated."}
+            {status === "missing" && "Not registered yet. Ask the registry admin to register it in the Admin tab first."}
+          </p>
+        )}
+        <button className="btn btn-primary" disabled={loading || !connected || status === "missing" || status === "inactive"} onClick={doEnroll} style={{ marginTop: 20, width: "100%" }}>
           {loading ? <><span className="spinner" /> Enrolling...</> : "Enroll My Identity"}
         </button>
       </div>
