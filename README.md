@@ -3,6 +3,10 @@
 Next.js front end for the Solana Passport registry (proof-of-personhood). Admin, enroll, verify and
 explorer tabs, using a Phantom wallet on devnet.
 
+## Demo Video
+
+- **Video Walkthrough & Presentation:** [https://youtu.be/6Q3gaBr8Qc4](https://youtu.be/6Q3gaBr8Qc4)
+
 ## Run
 
 ```bash
