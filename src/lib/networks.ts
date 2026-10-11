@@ -15,5 +15,5 @@ export const DEFAULT_NETWORK = new PublicKey(
   (process.env.NEXT_PUBLIC_RPC_URL ?? "").includes("mainnet") ? UNIQUENESS_NETWORK : DEVNET_TEST_NETWORK
 );
 
-/** Where a person gets a Civic Pass. */
-export const CIVIC_PASS_URL = "https://getpass.civic.com/";
+/** Civic has no standalone sign-up page we could confirm; passes are issued inside apps that integrate Civic. */
+export const CIVIC_PASS_URL = "https://docs.civic.com/pass/integration-guide/solana";
