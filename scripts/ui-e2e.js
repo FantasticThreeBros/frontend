@@ -26,8 +26,8 @@ const { Keypair, SystemProgram, Transaction } = require("@solana/web3.js");
   ok("user: Join is locked before choosing a pass", await page.getByRole("button", { name: /Join the registry/ }).count() === 0);
   // Civic path guidance
   await page.getByRole("button", { name: /I have \/ want a Civic Pass/ }).click();
-  ok("user: Civic path explains how to get a pass", await page.getByText("No Civic Pass found for this wallet yet").isVisible());
-  ok("user: Civic link present", (await page.locator("a[href*='getpass.civic.com']").count()) === 1);
+  ok("user: Civic path explains the situation", await page.getByText("No Civic Pass found for this wallet").isVisible());
+  ok("user: no dead getpass link", (await page.locator("a[href*=\"getpass.civic.com\"]").count()) === 0);
   await page.screenshot({ path: SHOTS + "/4-user-civic-guide.png" });
   // demo path
   await page.getByRole("button", { name: /Use demo pass/ }).click();

@@ -145,30 +145,18 @@ export function GetVerified({ onToast, onGoAdmin, onChanged }: Props) {
 
             {mode === "civic" && status.civicPass !== "valid" && (
               <div style={{ marginTop: 16 }}>
-                {status.civicPass === "none" && <Notice kind="info">No Civic Pass found for this wallet yet. That's normal if you haven't got one. Here's how to get one:</Notice>}
-                {status.civicPass === "expired" && <Notice kind="warn">Your Civic Pass has expired. Get a fresh one:</Notice>}
-                {(status.civicPass === "revoked" || status.civicPass === "frozen") && <Notice kind="warn">Your Civic Pass was {status.civicPass}. Get a new one:</Notice>}
-                {(status.civicPass === "other-wallet" || status.civicPass === "wrong-network" || status.civicPass === "unreadable") && <Notice kind="warn">That pass can't be used here ({status.civicPass.replace("-", " ")}). Get a new one for this wallet:</Notice>}
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
-                  {[
-                    <>Open Civic and start a pass for <b>this wallet</b>:{" "}
-                      <a href={CIVIC_PASS_URL} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>Get a Civic Pass <ExternalLink size={13} style={{ display: "inline", verticalAlign: "-2px" }} /></a></>,
-                    <>Connect the same wallet there: <span className="mono">{short(wallet)}</span>{" "}
-                      <button className="btn btn-secondary" style={{ padding: "2px 8px" }} onClick={copy}><Copy size={13} /></button></>,
-                    <>Finish Civic's check (it may ask for a CAPTCHA or selfie, and a signature).</>,
-                    <>Come back here. We check automatically, or press the button below.</>,
-                  ].map((t, i) => (
-                    <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", fontSize: 15, lineHeight: 1.6 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "var(--surface-hover)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{i + 1}</div>
-                      <div>{t}</div>
-                    </div>
-                  ))}
-                </div>
+                {status.civicPass === "none" && <Notice kind="info">No Civic Pass found for this wallet. Civic passes are issued inside apps that integrate Civic (there is no public sign-up page), so most people will not have one yet.</Notice>}
+                {status.civicPass === "expired" && <Notice kind="warn">Your Civic Pass has expired. It has to be refreshed in an app that integrates Civic.</Notice>}
+                {(status.civicPass === "revoked" || status.civicPass === "frozen") && <Notice kind="warn">Your Civic Pass was {status.civicPass}, so it can't be used.</Notice>}
+                {(status.civicPass === "other-wallet" || status.civicPass === "wrong-network" || status.civicPass === "unreadable") && <Notice kind="warn">That pass can't be used here ({status.civicPass.replace("-", " ")}).</Notice>}
+                <P>The quickest way to try the app is the <b>demo pass</b> above. If you already hold a Civic Pass issued to <span className="mono">{short(wallet)}</span> on the network this app trusts, it is picked up automatically.{" "}
+                  <a href={CIVIC_PASS_URL} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>About Civic Pass <ExternalLink size={13} style={{ display: "inline", verticalAlign: "-2px" }} /></a>{" "}
+                  <button className="btn btn-secondary" style={{ padding: "2px 8px" }} onClick={copy} title="Copy wallet address"><Copy size={13} /></button></P>
                 <button className="btn btn-secondary" disabled={busy === "check"} onClick={() => refresh(false)}>
                   {busy === "check" ? <span className="spinner" /> : <RefreshCcw size={16} />} Check again
                 </button>
                 <P muted><span style={{ display: "block", marginTop: 12 }}>
-                  Testing on devnet? This app trusts Civic's <b>devnet test network</b>, so the pass must be issued on that network. If Civic doesn't offer it to you, use the demo pass instead.</span></P>
+                  This app trusts Civic's <b>devnet test network</b>; a mainnet pass will not be recognised here.</span></P>
               </div>
             )}
             {mode && !trusted && adminHint}
